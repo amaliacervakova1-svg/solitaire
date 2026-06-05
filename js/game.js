@@ -143,7 +143,12 @@ export class Game {
   }
 
   tryMove(targetSource, targetPileIndex) {
-    if (!this.selected) return false;
+    // Проверяем, что selected и card существуют
+    if (!this.selected || !this.selected.card) {
+      console.warn('⚠️ tryMove: нет выбранной карты');
+      return false;
+    }
+    
     const { card, source, pileIndex, group } = this.selected;
 
     let targetPile, targetTop;
@@ -163,31 +168,43 @@ export class Game {
     this.moveCard(group, source, pileIndex, targetPile, targetSource, targetPileIndex);
     return true;
   }
-
-  moveCard(group, source, sourcePileIndex, targetPile, targetSource, targetPileIndex) {
+    moveCard(group, source, sourcePileIndex, targetPile, targetSource, targetPileIndex) {
     let revealedCardId = null;
 
-    // Запоминаем карту, которая откроется под перемещаемой группой (для корректной отмены)
+    // Запоминаем карту под перемещаемой группой и удаляем из источника
     if (source === 'tableau') {
       const p = this.tableaus[sourcePileIndex];
-      if (this.selected.cardIndex > 0) {
+      if (this.selected && this.selected.cardIndex > 0) {
         revealedCardId = p.cards[this.selected.cardIndex - 1].id;
       }
-      for (const c of group) p.removeCard(c);
+      
+      // Удаляем карты с проверкой
+      for (const c of group) {
+        if (!p.removeCard(c)) {
+          console.error(`❌ Ошибка: карта ${c.id} не найдена в колонке ${sourcePileIndex}!`);
+          return; // Прерываем перемещение
+        }
+      }
+      
       const newTop = p.topCard();
       if (newTop && newTop.hidden) newTop.flip();
     } else if (source === 'waste') {
-      this.deck.removeFromWaste(group[0]);
+      if (!this.deck.removeFromWaste(group[0])) {
+        console.error(`❌ Ошибка: карта ${group[0].id} не найдена в waste!`);
+        return;
+      }
     } else if (source === 'foundation') {
-      this.foundations[sourcePileIndex].removeCard(group[0]);
+      if (!this.foundations[sourcePileIndex].removeCard(group[0])) {
+        console.error(`❌ Ошибка: карта ${group[0].id} не найдена в foundation!`);
+        return;
+      }
     }
 
+    // Добавляем в целевую стопку
     for (const c of group) {
-    c.hidden = false; // на всякий случай — карта должна быть открытой после хода
-    targetPile.addCard(c);
+      c.hidden = false;
+      targetPile.addCard(c);
     }
-
-    this.checkForDuplicates();
 
     this.moves++;
     this.score += 10;
@@ -197,7 +214,7 @@ export class Game {
       group: group.slice(),
       source, sourcePileIndex,
       targetSource, targetPileIndex,
-      revealedCardId // Сохраняем ID карты, которую нужно будет снова закрыть при отмене
+      revealedCardId
     };
 
     this.dispatch('cardMoved', {
@@ -205,26 +222,17 @@ export class Game {
       to: targetSource, toIndex: targetPileIndex
     });
 
-    this.dispatch('stateChanged', {});
-
-    if (this.settings.autoFoundation) {
-      this.autoMoveToFoundation();
-    }
-    this.checkWin();
-
     // Очищаем список автоперемещений перед новым ходом
     this.autoMovedCards = [];
     
     // Запускаем автоперемещение (если включено и ход НЕ с foundation)
     if (this.settings.autoFoundation && source !== 'foundation') {
-      clearTimeout(this.autoMoveTimeout); // Очищаем предыдущий таймер
-      setTimeout(() => this.autoMoveToFoundation(), 100);
+      clearTimeout(this.autoMoveTimeout);
+      this.autoMoveTimeout = setTimeout(() => this.autoMoveToFoundation(), 100);
     }
-    
-    // Проверяем, все ли карты открыты — если да, запускаем авто-сбор
-    if (this.areAllCardsRevealed()) {
-      setTimeout(() => this.autoCollectAll(), 300);
-    }
+
+    this.checkWin();
+    this.dispatch('stateChanged', {});
   }
 
   // Проверка на дубликаты карт
@@ -330,6 +338,19 @@ export class Game {
         f.addCard(card);
         this.score += 15;
         
+         // === ДОБАВИТЬ: Анимация для автоперемещения ===
+        setTimeout(() => {
+          const cardEl = document.querySelector(`.card[data-id="${card.id}"]`);
+          const foundationEl = document.getElementById(`foundation-${i}`);
+          if (cardEl && foundationEl) {
+            cardEl.classList.add('auto-moving');
+            setTimeout(() => {
+              cardEl.classList.remove('auto-moving');
+            }, 300);
+          }
+        }, 50);
+        // ================================================
+
         // Сохраняем в список автоперемещений
         this.autoMovedCards.push({
           card: card,
@@ -354,6 +375,33 @@ export class Game {
       this.stopTimer();
       this.dispatch('gameStateChanged', { state: 'won', elapsed: this.elapsed, moves: this.moves });
     }
+  }
+
+    // Анимированное перемещение карты
+  animateCardMove(cardElement, targetPileElement, callback) {
+    if (!cardElement || !targetPileElement) {
+      if (callback) callback();
+      return;
+    }
+
+    // Получаем координаты
+    const startRect = cardElement.getBoundingClientRect();
+    const targetRect = targetPileElement.getBoundingClientRect();
+
+    // Вычисляем смещение
+    const deltaX = targetRect.left - startRect.left;
+    const deltaY = targetRect.top - startRect.top;
+
+    // Добавляем класс для анимации
+    cardElement.classList.add('moving');
+    cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+    // После завершения анимации
+    setTimeout(() => {
+      cardElement.classList.remove('moving');
+      cardElement.style.transform = '';
+      if (callback) callback();
+    }, 250); // Должно совпадать с transition в CSS (0.25s)
   }
 
     // Проверка: все ли карты открыты в колонках
@@ -383,6 +431,14 @@ export class Game {
       const wasteTop = this.deck.topWaste();
       if (wasteTop && this.tryAutoMove(wasteTop, 'waste', 0)) {
         hasWork = true;
+        // Анимация
+        setTimeout(() => {
+          const cardEl = document.querySelector(`.card[data-id="${wasteTop.id}"]`);
+          if (cardEl) {
+            cardEl.classList.add('auto-moving');
+            setTimeout(() => cardEl.classList.remove('auto-moving'), 300);
+          }
+        }, 50);
         this.dispatch('stateChanged', {});
         return;
       }
@@ -392,6 +448,14 @@ export class Game {
         const top = this.tableaus[i].topCard();
         if (top && !top.hidden && this.tryAutoMove(top, 'tableau', i)) {
           hasWork = true;
+          // Анимация
+          setTimeout(() => {
+            const cardEl = document.querySelector(`.card[data-id="${top.id}"]`);
+            if (cardEl) {
+              cardEl.classList.add('auto-moving');
+              setTimeout(() => cardEl.classList.remove('auto-moving'), 300);
+            }
+          }, 50);
           this.dispatch('stateChanged', {});
           return;
         }
@@ -408,7 +472,7 @@ export class Game {
           moves: this.moves
         });
       }
-    }, 150); // Задержка 150мс между перемещениями
+    }, 200); // Задержка 150мс между перемещениями
   }
 
   undo() {

@@ -200,6 +200,10 @@ export class UI {
   render() {
     if (!this.game) return;
 
+    document.querySelectorAll('.valid-target').forEach(el => {
+      el.classList.remove('valid-target');
+    });
+    
     // Рендерим все стопки
     this.game.deck.render();
     this.game.tableaus.forEach(p => p.render());
@@ -230,6 +234,29 @@ export class UI {
       this.game.hints.undo <= 0 || !this.game.lastMove;
     document.getElementById('btn-hint').disabled = this.game.hints.hint <= 0;
     document.getElementById('btn-wand').disabled = this.game.hints.wand <= 0;
+  
+    // Подсветка возможных целей для выбранной карты
+    if (this.game.selected && this.game.selected.card) {
+      const card = this.game.selected.card;
+      
+      // Проверяем foundation
+      for (let i = 0; i < this.game.foundations.length; i++) {
+        const f = this.game.foundations[i];
+        if (card.canGoToFoundation(f.topCard())) {
+          const el = document.getElementById(`foundation-${i}`);
+          if (el) el.classList.add('valid-target');
+        }
+      }
+      
+      // Проверяем tableau
+      for (let i = 0; i < this.game.tableaus.length; i++) {
+        const t = this.game.tableaus[i];
+        if (card.canGoToTableau(t.topCard(), this.game.settings.emptyKingOnly)) {
+          const el = document.getElementById(`tableau-${i}`);
+          if (el) el.classList.add('valid-target');
+        }
+      }
+    }
   }
 
   updateHintCounts() {
