@@ -26,6 +26,7 @@ export class Game {
     this.isFinished = false;
     this.lastMove = null;
     this.selected = null;
+    this.autoMovedCards = [];
   }
 
   start() {
@@ -41,6 +42,7 @@ export class Game {
     this.elapsed = 0;
     this.lastMove = null;
     this.selected = null;
+    this.autoMovedCards = [];
     this.isFinished = false;
     this.isPaused = false;
 
@@ -84,6 +86,10 @@ export class Game {
     if (source === 'deck') {
       this.deck.draw(this.settings.drawCount);
       this.dispatch('stateChanged', {});
+      // Автоперемещение после взятия карт
+      if (this.settings.autoFoundation) {
+        setTimeout(() => this.autoMoveToFoundation(), 100);
+      }
       return;
     }
     if (source === 'deck-empty') {
@@ -100,18 +106,21 @@ export class Game {
       pile = this.tableaus[pileIndex];
       card = pile.cards[cardIndex];
       if (card.hidden) {
-        if (cardIndex === pile.size() - 1) {
-          card.flip();
-          this.dispatch('stateChanged', {});
+      if (pile && cardIndex === pile.size() - 1) {
+        card.flip();
+        this.dispatch('stateChanged', {});
+        // Автоперемещение после открытия карты
+        if (this.settings.autoFoundation) {
+          setTimeout(() => this.autoMoveToFoundation(), 100);
         }
-        return;
       }
+      return;
+    }
     } else if (source === 'foundation') {
       pile = this.foundations[pileIndex];
       card = pile.topCard();
     }
 
-    if (!card) return;
 
     if (this.selected) {
       const moved = this.tryMove(source, pileIndex);
@@ -198,6 +207,14 @@ export class Game {
       this.autoMoveToFoundation();
     }
     this.checkWin();
+
+    // Очищаем список автоперемещений перед новым ходом
+    this.autoMovedCards = [];
+    
+    // Запускаем автоперемещение (если включено и ход НЕ с foundation)
+    if (this.settings.autoFoundation && source !== 'foundation') {
+      setTimeout(() => this.autoMoveToFoundation(), 100);
+    }
     
     // Проверяем, все ли карты открыты — если да, запускаем авто-сбор
     if (this.areAllCardsRevealed()) {
@@ -226,14 +243,29 @@ export class Game {
     for (let i = 0; i < this.foundations.length; i++) {
       const f = this.foundations[i];
       if (card.canGoToFoundation(f.topCard())) {
-        if (source === 'waste') this.deck.removeFromWaste(card);
-        else if (source === 'tableau') {
+        // Запоминаем, откуда взяли карту
+        const autoMoveInfo = {
+          card: card,
+          fromSource: source,
+          fromPileIndex: pileIndex
+        };
+        
+        if (source === 'waste') {
+          this.deck.removeFromWaste(card);
+        } else if (source === 'tableau') {
           this.tableaus[pileIndex].removeCard(card);
           const newTop = this.tableaus[pileIndex].topCard();
-          if (newTop && newTop.hidden) newTop.flip();
+          if (newTop && newTop.hidden) {
+            newTop.flip();
+          }
         }
+        
         f.addCard(card);
         this.score += 15;
+        
+        // Сохраняем в список автоперемещений
+        this.autoMovedCards.push(autoMoveInfo);
+        
         this.dispatch('cardMoved', {
           card: card.id, from: source, fromIndex: pileIndex,
           to: 'foundation', toIndex: i
@@ -312,6 +344,30 @@ export class Game {
     if (this.isPaused || this.isFinished) return false;
     if (this.hints.undo <= 0 || !this.lastMove) return false;
 
+    // 1. Сначала возвращаем карты, которые были автоматически перемещены на базу
+    for (const autoMove of this.autoMovedCards) {
+      // Находим карту на foundation и удаляем её
+      for (const f of this.foundations) {
+        const idx = f.cards.indexOf(autoMove.card);
+        if (idx !== -1) {
+          f.cards.splice(idx, 1);
+          break;
+        }
+      }
+      
+      // Возвращаем карту туда, откуда она была взята
+      autoMove.card.hidden = false;
+      if (autoMove.fromSource === 'waste') {
+        this.deck.waste.push(autoMove.card);
+      } else if (autoMove.fromSource === 'tableau') {
+        this.tableaus[autoMove.fromPileIndex].addCard(autoMove.card);
+      }
+    }
+    
+    // Очищаем список автоперемещений
+    this.autoMovedCards = [];
+
+    // 2. Теперь отменяем основной ход
     const m = this.lastMove;
     let sourcePile, targetPile;
 
@@ -322,24 +378,24 @@ export class Game {
     if (m.targetSource === 'tableau') targetPile = this.tableaus[m.targetPileIndex];
     else if (m.targetSource === 'foundation') targetPile = this.foundations[m.targetPileIndex];
 
-    // 1. Убираем карты из целевой стопки
+    // Убираем из целевой стопки
     for (const c of m.group) {
       targetPile.removeCard(c);
     }
 
-    // 2. Возвращаем карты в исходную стопку
+    // Возвращаем в исходную
     if (m.source === 'waste') {
       for (const c of m.group) {
-        c.hidden = false; // Карты в сбросе всегда открыты
+        c.hidden = false;
         this.deck.waste.push(c);
       }
     } else {
       for (const c of m.group) {
-        c.hidden = false; // Перемещённая карта остаётся открытой
+        c.hidden = false;
         sourcePile.addCard(c);
       }
       
-      // 3. ИСПРАВЛЕНИЕ: закрываем карту, которая была под перемещённой группой
+      // Закрываем карту под перемещённой
       if (m.source === 'tableau' && m.revealedCardId) {
         const cardToHide = sourcePile.cards.find(c => c.id === m.revealedCardId);
         if (cardToHide) {
