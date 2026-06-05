@@ -1,0 +1,10 @@
+{
+  "drawCount": 1,
+  "emptyKingOnly": true,
+  "autoFoundation": true,
+  "hints": {
+    "undo": 3,
+    "hint": 3,
+    "wand": 1
+  }
+}

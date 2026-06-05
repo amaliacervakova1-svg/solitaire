@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Пасьянс «Косынка»</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Стартовый экран -->
+  <div id="start-screen" class="screen">
+    <h1>♠ Пасьянс «Косынка» ♥</h1>
+    <div class="menu-buttons">
+      <button id="btn-start">▶ Начать игру</button>
+      <button id="btn-rules">📖 Правила</button>
+      <button id="btn-settings">⚙ Настройки</button>
+      <button id="btn-stats">📊 Статистика</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно (для правил, настроек, статистики) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="modal-close" class="modal-close">×</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Игровой экран -->
+  <div id="game-screen" class="screen hidden">
+    <div class="top-panel">
+      <div class="stats-bar">
+        <span>⏱ <span id="timer">00:00</span></span>
+        <span>Ходов: <span id="moves">0</span></span>
+        <span>Очки: <span id="score">0</span></span>
+      </div>
+      <div class="hints-bar">
+        <button id="btn-undo" class="hint-btn" title="Ctrl+Z">↶ Отмена (<span id="count-undo">3</span>)</button>
+        <button id="btn-hint" class="hint-btn" title="Клавиша H">💡 Подсказка (<span id="count-hint">3</span>)</button>
+        <button id="btn-wand" class="hint-btn">✨ Палочка (<span id="count-wand">1</span>)</button>
+        <button id="btn-pause" title="Esc">⏸ Пауза</button>
+        <button id="btn-menu">Меню</button>
+      </div>
+    </div>
+
+    <div id="game-field">
+      <div class="top-row">
+        <div id="deck" class="pile"></div>
+        <div id="waste" class="pile"></div>
+        <div class="spacer"></div>
+        <div id="foundation-0" class="pile foundation"></div>
+        <div id="foundation-1" class="pile foundation"></div>
+        <div id="foundation-2" class="pile foundation"></div>
+        <div id="foundation-3" class="pile foundation"></div>
+      </div>
+      <div class="bottom-row">
+        <div id="tableau-0" class="pile tableau"></div>
+        <div id="tableau-1" class="pile tableau"></div>
+        <div id="tableau-2" class="pile tableau"></div>
+        <div id="tableau-3" class="pile tableau"></div>
+        <div id="tableau-4" class="pile tableau"></div>
+        <div id="tableau-5" class="pile tableau"></div>
+        <div id="tableau-6" class="pile tableau"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Оверлей паузы -->
+  <div id="pause-screen" class="overlay hidden">
+    <div class="overlay-content">
+      <h2>⏸ Пауза</h2>
+      <button id="btn-resume">Продолжить</button>
+      <button id="btn-quit">Выйти в меню</button>
+    </div>
+  </div>
+
+  <!-- Оверлей победы -->
+  <div id="win-screen" class="overlay hidden">
+    <div class="overlay-content">
+      <h2>🎉 Победа!</h2>
+      <p>Время: <span id="win-time"></span></p>
+      <p>Ходов: <span id="win-moves"></span></p>
+      <button id="btn-new-game">Новая игра</button>
+      <button id="btn-to-menu">В меню</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
