@@ -27,6 +27,7 @@ export class Game {
     this.lastMove = null;
     this.selected = null;
     this.autoMovedCards = [];
+    this.autoMoveTimeout = null; // Для хранения таймера
   }
 
   start() {
@@ -88,6 +89,7 @@ export class Game {
       this.dispatch('stateChanged', {});
       // Автоперемещение после взятия карт
       if (this.settings.autoFoundation) {
+        clearTimeout(this.autoMoveTimeout); // Очищаем предыдущий таймер
         setTimeout(() => this.autoMoveToFoundation(), 100);
       }
       return;
@@ -185,6 +187,8 @@ export class Game {
     targetPile.addCard(c);
     }
 
+    this.checkForDuplicates();
+
     this.moves++;
     this.score += 10;
     this.selected = null;
@@ -213,6 +217,7 @@ export class Game {
     
     // Запускаем автоперемещение (если включено и ход НЕ с foundation)
     if (this.settings.autoFoundation && source !== 'foundation') {
+      clearTimeout(this.autoMoveTimeout); // Очищаем предыдущий таймер
       setTimeout(() => this.autoMoveToFoundation(), 100);
     }
     
@@ -222,13 +227,65 @@ export class Game {
     }
   }
 
+  // Проверка на дубликаты карт
+  checkForDuplicates() {
+    const allCards = [];
+    const duplicates = [];
+    
+    // Собираем все карты из waste
+    for (const card of this.deck.waste) {
+      allCards.push({ card, location: 'waste' });
+    }
+    
+    // Собираем все карты из колонок
+    for (let i = 0; i < this.tableaus.length; i++) {
+      for (const card of this.tableaus[i].cards) {
+        allCards.push({ card, location: `tableau-${i}` });
+      }
+    }
+    
+    // Собираем все карты из foundation
+    for (let i = 0; i < this.foundations.length; i++) {
+      for (const card of this.foundations[i].cards) {
+        allCards.push({ card, location: `foundation-${i}` });
+      }
+    }
+    
+    // Ищем дубликаты
+    const cardCount = {};
+    for (const item of allCards) {
+      const id = item.card.id;
+      if (!cardCount[id]) {
+        cardCount[id] = [];
+      }
+      cardCount[id].push(item.location);
+      
+      if (cardCount[id].length > 1 && !duplicates.includes(id)) {
+        duplicates.push(id);
+        console.error(`❌ ДУБЛИКАТ КАРТЫ ${id}:`, cardCount[id]);
+      }
+    }
+    
+    if (duplicates.length > 0) {
+      console.error('Найдены дубликаты:', duplicates);
+    }
+  }
+
   autoMoveToFoundation() {
     let moved = true;
     while (moved) {
       moved = false;
-      const wasteTop = this.deck.topWaste();
-      if (wasteTop && this.tryAutoMove(wasteTop, 'waste', 0)) moved = true;
       
+      // Проверяем ВСЕ карты в waste (не только верхнюю)
+      for (let i = this.deck.waste.length - 1; i >= 0; i--) {
+        const card = this.deck.waste[i];
+        if (this.tryAutoMove(card, 'waste', i)) {
+          moved = true;
+          break; // Начинаем проверку заново, так как waste изменился
+        }
+      }
+      
+      // Проверяем колонки
       for (let i = 0; i < this.tableaus.length; i++) {
         const top = this.tableaus[i].topCard();
         if (top && !top.hidden && this.tryAutoMove(top, 'tableau', i)) {
@@ -243,28 +300,42 @@ export class Game {
     for (let i = 0; i < this.foundations.length; i++) {
       const f = this.foundations[i];
       if (card.canGoToFoundation(f.topCard())) {
-        // Запоминаем, откуда взяли карту
-        const autoMoveInfo = {
-          card: card,
-          fromSource: source,
-          fromPileIndex: pileIndex
-        };
         
+        // Пытаемся удалить карту из источника
+        let removed = false;
         if (source === 'waste') {
-          this.deck.removeFromWaste(card);
-        } else if (source === 'tableau') {
-          this.tableaus[pileIndex].removeCard(card);
-          const newTop = this.tableaus[pileIndex].topCard();
-          if (newTop && newTop.hidden) {
-            newTop.flip();
+          const idx = this.deck.waste.indexOf(card);
+          if (idx !== -1) {
+            this.deck.waste.splice(idx, 1);
+            removed = true;
           }
+        } else if (source === 'tableau') {
+          // Используем removeCard, который вернет true, если карта найдена
+          removed = this.tableaus[pileIndex].removeCard(card);
+          if (removed) {
+            const newTop = this.tableaus[pileIndex].topCard();
+            if (newTop && newTop.hidden) {
+              newTop.flip();
+            }
+          }
+        }
+
+        // Если не удалось удалить карту — прерываем перемещение!
+        // Это предотвратит появление дубликатов
+        if (!removed) {
+          console.warn(`⚠️ Автоперемещение отменено: карта ${card.id} не найдена в источнике ${source}`);
+          return false;
         }
         
         f.addCard(card);
         this.score += 15;
         
         // Сохраняем в список автоперемещений
-        this.autoMovedCards.push(autoMoveInfo);
+        this.autoMovedCards.push({
+          card: card,
+          fromSource: source,
+          fromPileIndex: pileIndex
+        });
         
         this.dispatch('cardMoved', {
           card: card.id, from: source, fromIndex: pileIndex,

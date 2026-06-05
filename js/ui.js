@@ -210,7 +210,7 @@ export class UI {
     document.getElementById('score').textContent = this.game.score;
 
     // Подсвечиваем выбранную карту
-    if (this.game.selected) {
+    if (this.game.selected && this.game.selected.card) {
       const selId = this.game.selected.card.id;
       const el = document.querySelector(`.card[data-id="${selId}"]`);
       if (el) el.classList.add('selected');
