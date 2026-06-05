@@ -60,18 +60,24 @@ export class DeckPile extends Pile {
 
   // Взять N карт из колоды
   draw(count) {
-    const drawn = [];
-    for (let i = 0; i < count; i++) {
-      if (this.cards.length === 0) {
-        this.recycle(); // если stock пуст — переворачиваем waste обратно
-        if (this.cards.length === 0) break;
-      }
+    // 1. Если в колоде (stock) не осталось карт, переворачиваем сброс (waste) обратно
+    if (this.cards.length === 0) {
+      this.recycle();
+    }
+
+    // 2. Если карт всё равно нет (и в сбросе было пусто), просто выходим
+    if (this.cards.length === 0) return;
+
+    // 3. Вычисляем, сколько карт реально можно достать 
+    // (нельзя достать больше, чем физически есть в колоде)
+    const actualCount = Math.min(count, this.cards.length);
+
+    // 4. Достаём карты
+    for (let i = 0; i < actualCount; i++) {
       const card = this.cards.pop();
       card.hidden = false;
       this.waste.push(card);
-      drawn.push(card);
     }
-    return drawn;
   }
 
   // Перевернуть все карты из waste обратно в stock

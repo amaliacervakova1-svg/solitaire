@@ -171,7 +171,10 @@ export class Game {
       this.foundations[sourcePileIndex].removeCard(group[0]);
     }
 
-    for (const c of group) targetPile.addCard(c);
+    for (const c of group) {
+    c.hidden = false; // на всякий случай — карта должна быть открытой после хода
+    targetPile.addCard(c);
+    }
 
     this.moves++;
     this.score += 10;
@@ -398,6 +401,7 @@ export class Game {
         } else {
           targetPile = this.tableaus[item.target.index];
         }
+        card.hidden = false; // открываем карту перед перемещением
         targetPile.addCard(card);
 
         // Записываем в историю для отмены (как обычный ход)
