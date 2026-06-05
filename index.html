@@ -7,16 +7,48 @@
 </head>
 <body>
 
-  <!-- Стартовый экран -->
-  <div id="start-screen" class="screen">
-    <h1>♠ Пасьянс «Косынка» ♥</h1>
-    <div class="menu-buttons">
-      <button id="btn-start">▶ Начать игру</button>
-      <button id="btn-rules">📖 Правила</button>
-      <button id="btn-settings">⚙ Настройки</button>
-      <button id="btn-stats">📊 Статистика</button>
+ <div id="start-screen" class="screen vintage-casino">
+  <div class="casino-frame">
+    <div class="corner-decoration top-left">♠</div>
+    <div class="corner-decoration top-right">♥</div>
+    <div class="corner-decoration bottom-left">♦</div>
+    <div class="corner-decoration bottom-right">♣</div>
+    
+    <div class="casino-content">
+      <h1 class="casino-title">
+        <span class="title-decor">✦</span>
+        ПАСЬЯНС
+        <span class="title-decor">✦</span>
+      </h1>
+      <h2 class="casino-subtitle">«КОСЫНКА»</h2>
+      
+      <div class="divider">
+        <span class="divider-line"></span>
+        <span class="divider-icon"> ♥ ♦ ♣</span>
+        <span class="divider-line"></span>
+      </div>
+      
+      <div class="menu-buttons">
+        <button id="btn-start" class="casino-btn primary">
+          <span class="btn-icon">▶</span>
+          Начать игру
+        </button>
+        <button id="btn-rules" class="casino-btn">
+          <span class="btn-icon">📖</span>
+          Правила
+        </button>
+        <button id="btn-settings" class="casino-btn">
+          <span class="btn-icon">⚙</span>
+          Настройки
+        </button>
+        <button id="btn-stats" class="casino-btn">
+          <span class="btn-icon">📊</span>
+          Статистика
+        </button>
+      </div>
     </div>
   </div>
+</div>
 
   <!-- Модальное окно (для правил, настроек, статистики) -->
   <div id="modal" class="modal hidden">
