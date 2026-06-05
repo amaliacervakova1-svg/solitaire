@@ -79,19 +79,48 @@ export class UI {
     // Клик по игровому полю (делегирование)
     document.getElementById('game-field').addEventListener('click', (e) => {
       if (!this.game) return;
+
       const cardEl = e.target.closest('.card');
-      if (!cardEl) {
-        // Клик по пустому месту — снимаем выделение
-        if (this.game.selected) {
-          this.game.selected = null;
-          this.game.dispatch('selectionChanged', {});
+      const pileEl = e.target.closest('.pile');
+
+      // 1. Если карта УЖЕ выбрана, и мы кликнули по пустой стопке (или мимо карты, но внутри стопки)
+      if (this.game.selected && !cardEl && pileEl) {
+        const pileId = pileEl.id;
+        let moved = false;
+
+        // Пытаемся переместить в колонку игрового поля
+        if (pileId.startsWith('tableau-')) {
+          const pileIndex = parseInt(pileId.split('-')[1]);
+          moved = this.game.tryMove('tableau', pileIndex);
+        } 
+        // Пытаемся переместить на базу
+        else if (pileId.startsWith('foundation-')) {
+          const pileIndex = parseInt(pileId.split('-')[1]);
+          moved = this.game.tryMove('foundation', pileIndex);
         }
+
+        if (moved) return; // Если ход успешен, выходим
+
+        // Если переместить не удалось (например, король не подходит по правилам), снимаем выделение
+        this.game.selected = null;
+        this.game.dispatch('selectionChanged', {});
         return;
       }
-      const source = cardEl.dataset.source;
-      const pileIndex = parseInt(cardEl.dataset.pileIndex) || 0;
-      const cardIndex = parseInt(cardEl.dataset.cardIndex) || 0;
-      this.game.selectCard(source, pileIndex, cardIndex);
+
+      // 2. Стандартная логика: клик по самой карте
+      if (cardEl) {
+        const source = cardEl.dataset.source;
+        const pileIndex = parseInt(cardEl.dataset.pileIndex) || 0;
+        const cardIndex = parseInt(cardEl.dataset.cardIndex) || 0;
+        this.game.selectCard(source, pileIndex, cardIndex);
+        return;
+      }
+
+      // 3. Клик мимо карт и мимо стопок (просто зелёный фон) — снимаем выделение
+      if (this.game.selected) {
+        this.game.selected = null;
+        this.game.dispatch('selectionChanged', {});
+      }
     });
 
     // Клавиатура (второе событие, помимо click)
@@ -171,6 +200,10 @@ export class UI {
   render() {
     if (!this.game) return;
 
+    document.querySelectorAll('.valid-target').forEach(el => {
+      el.classList.remove('valid-target');
+    });
+    
     // Рендерим все стопки
     this.game.deck.render();
     this.game.tableaus.forEach(p => p.render());
@@ -181,7 +214,7 @@ export class UI {
     document.getElementById('score').textContent = this.game.score;
 
     // Подсвечиваем выбранную карту
-    if (this.game.selected) {
+    if (this.game.selected && this.game.selected.card) {
       const selId = this.game.selected.card.id;
       const el = document.querySelector(`.card[data-id="${selId}"]`);
       if (el) el.classList.add('selected');
@@ -201,6 +234,29 @@ export class UI {
       this.game.hints.undo <= 0 || !this.game.lastMove;
     document.getElementById('btn-hint').disabled = this.game.hints.hint <= 0;
     document.getElementById('btn-wand').disabled = this.game.hints.wand <= 0;
+  
+    // Подсветка возможных целей для выбранной карты
+    if (this.game.selected && this.game.selected.card) {
+      const card = this.game.selected.card;
+      
+      // Проверяем foundation
+      for (let i = 0; i < this.game.foundations.length; i++) {
+        const f = this.game.foundations[i];
+        if (card.canGoToFoundation(f.topCard())) {
+          const el = document.getElementById(`foundation-${i}`);
+          if (el) el.classList.add('valid-target');
+        }
+      }
+      
+      // Проверяем tableau
+      for (let i = 0; i < this.game.tableaus.length; i++) {
+        const t = this.game.tableaus[i];
+        if (card.canGoToTableau(t.topCard(), this.game.settings.emptyKingOnly)) {
+          const el = document.getElementById(`tableau-${i}`);
+          if (el) el.classList.add('valid-target');
+        }
+      }
+    }
   }
 
   updateHintCounts() {

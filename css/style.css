@@ -10,28 +10,187 @@ body {
 .screen { width: 100%; min-height: 100vh; }
 .hidden { display: none !important; }
 
-/* ===== Стартовый экран ===== */
-#start-screen {
+/* ===== Винтажное казино ===== */
+.vintage-casino {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 30px;
+  min-height: 100vh;
+  background: 
+    linear-gradient(135deg, rgba(139, 0, 0, 0.9) 0%, rgba(101, 67, 33, 0.9) 100%),
+    repeating-linear-gradient(
+      45deg,
+      #2c1810,
+      #2c1810 10px,
+      #3d2418 10px,
+      #3d2418 20px
+    );
+  background-blend-mode: multiply;
+  padding: 20px;
 }
-#start-screen h1 { font-size: 48px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-.menu-buttons { display: flex; flex-direction: column; gap: 15px; }
-.menu-buttons button {
-  padding: 15px 40px;
+
+.casino-frame {
+  position: relative;
+  background: linear-gradient(145deg, #1a0f0a 0%, #2c1810 100%);
+  border: 4px solid #d4af37;
+  border-radius: 15px;
+  padding: 60px 50px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 
+    0 0 0 2px #8b6914,
+    0 0 0 8px #1a0f0a,
+    0 0 0 10px #d4af37,
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    inset 0 0 100px rgba(0, 0, 0, 0.5);
+}
+
+.corner-decoration {
+  position: absolute;
+  font-size: 48px;
+  color: #d4af37;
+  opacity: 0.6;
+  font-family: 'Georgia', serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.corner-decoration.top-left {
+  top: 20px;
+  left: 25px;
+}
+
+.corner-decoration.top-right {
+  top: 20px;
+  right: 25px;
+}
+
+.corner-decoration.bottom-left {
+  bottom: 20px;
+  left: 25px;
+}
+
+.corner-decoration.bottom-right {
+  bottom: 20px;
+  right: 25px;
+}
+
+.casino-content {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.casino-title {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 48px;
+  color: #d4af37;
+  margin: 0 0 10px 0;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(212, 175, 55, 0.3);
+  letter-spacing: 3px;
+  font-weight: bold;
+}
+
+.title-decor {
+  font-size: 36px;
+  margin: 0 15px;
+}
+
+.casino-subtitle {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 36px;
+  color: #f4e4c1;
+  margin: 0 0 30px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 5px;
+  font-weight: normal;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 30px 0;
+  gap: 15px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+}
+
+.divider-icon {
+  color: #d4af37;
+  font-size: 20px;
+  letter-spacing: 10px;
+  opacity: 0.7;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.casino-btn {
+  position: relative;
+  padding: 18px 30px;
+  font-family: 'Georgia', 'Times New Roman', serif;
   font-size: 18px;
-  border: none;
+  font-weight: bold;
+  color: #f4e4c1;
+  background: linear-gradient(145deg, #8b0000 0%, #5c0000 100%);
+  border: 2px solid #d4af37;
   border-radius: 8px;
-  background: #fff;
-  color: #2e7d32;
   cursor: pointer;
-  min-width: 260px;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
-.menu-buttons button:hover { background: #e0e0e0; }
+
+.casino-btn:hover {
+  background: linear-gradient(145deg, #a00000 0%, #700000 100%);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(212, 175, 55, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: #f4e4c1;
+}
+
+.casino-btn:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.casino-btn.primary {
+  background: linear-gradient(145deg, #2d5016 0%, #1a3010 100%);
+  font-size: 20px;
+  padding: 22px 30px;
+  border-width: 3px;
+}
+
+.casino-btn.primary:hover {
+  background: linear-gradient(145deg, #3d6020 0%, #2a4015 100%);
+}
+
+.btn-icon {
+  font-size: 20px;
+}
+
 
 /* ===== Модальное окно ===== */
 .modal {
@@ -245,4 +404,38 @@ body {
   display: block;
   margin: 15px auto;
   border: 1px solid #ccc;
+}
+
+/* ===== АНИМАЦИЯ ПЕРЕМЕЩЕНИЯ КАРТ ===== */
+.card.moving {
+  transition: transform 0.25s ease-in-out, opacity 0.2s;
+  z-index: 1000 !important;
+  pointer-events: none; /* Чтобы нельзя было кликнуть во время анимации */
+}
+
+.card.moving-to-foundation {
+  transition: transform 0.3s ease-in, opacity 0.2s;
+}
+
+/* Эффект при автоперемещении */
+@keyframes moveToFoundation {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.card.auto-moving {
+  animation: moveToFoundation 0.3s ease-in-out;
+}
+
+/* Подсветка при наведении на возможную цель */
+.pile.valid-target {
+  border-color: #4caf50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
 }
