@@ -198,6 +198,11 @@ export class Game {
       this.autoMoveToFoundation();
     }
     this.checkWin();
+    
+    // Проверяем, все ли карты открыты — если да, запускаем авто-сбор
+    if (this.areAllCardsRevealed()) {
+      setTimeout(() => this.autoCollectAll(), 300);
+    }
   }
 
   autoMoveToFoundation() {
@@ -246,6 +251,61 @@ export class Game {
       this.stopTimer();
       this.dispatch('gameStateChanged', { state: 'won', elapsed: this.elapsed, moves: this.moves });
     }
+  }
+
+    // Проверка: все ли карты открыты в колонках
+  areAllCardsRevealed() {
+    for (const pile of this.tableaus) {
+      for (const card of pile.cards) {
+        if (card.hidden) return false;
+      }
+    }
+    return true;
+  }
+
+  // Автоматический сбор всех карт на базу
+  autoCollectAll() {
+    // Проверяем, есть ли что собирать
+    let hasWork = true;
+    
+    const collectInterval = setInterval(() => {
+      if (!hasWork || this.isFinished) {
+        clearInterval(collectInterval);
+        return;
+      }
+
+      hasWork = false;
+
+      // Проверяем waste
+      const wasteTop = this.deck.topWaste();
+      if (wasteTop && this.tryAutoMove(wasteTop, 'waste', 0)) {
+        hasWork = true;
+        this.dispatch('stateChanged', {});
+        return;
+      }
+
+      // Проверяем все колонки
+      for (let i = 0; i < this.tableaus.length; i++) {
+        const top = this.tableaus[i].topCard();
+        if (top && !top.hidden && this.tryAutoMove(top, 'tableau', i)) {
+          hasWork = true;
+          this.dispatch('stateChanged', {});
+          return;
+        }
+      }
+
+      // Если ничего не переместили и карт на поле больше нет — победа
+      const cardsOnTable = this.tableaus.reduce((sum, p) => sum + p.size(), 0);
+      if (cardsOnTable === 0 && !hasWork) {
+        this.isFinished = true;
+        this.stopTimer();
+        this.dispatch('gameStateChanged', {
+          state: 'won',
+          elapsed: this.elapsed,
+          moves: this.moves
+        });
+      }
+    }, 150); // Задержка 150мс между перемещениями
   }
 
   undo() {
