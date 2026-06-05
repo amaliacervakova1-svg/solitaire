@@ -79,19 +79,48 @@ export class UI {
     // Клик по игровому полю (делегирование)
     document.getElementById('game-field').addEventListener('click', (e) => {
       if (!this.game) return;
+
       const cardEl = e.target.closest('.card');
-      if (!cardEl) {
-        // Клик по пустому месту — снимаем выделение
-        if (this.game.selected) {
-          this.game.selected = null;
-          this.game.dispatch('selectionChanged', {});
+      const pileEl = e.target.closest('.pile');
+
+      // 1. Если карта УЖЕ выбрана, и мы кликнули по пустой стопке (или мимо карты, но внутри стопки)
+      if (this.game.selected && !cardEl && pileEl) {
+        const pileId = pileEl.id;
+        let moved = false;
+
+        // Пытаемся переместить в колонку игрового поля
+        if (pileId.startsWith('tableau-')) {
+          const pileIndex = parseInt(pileId.split('-')[1]);
+          moved = this.game.tryMove('tableau', pileIndex);
+        } 
+        // Пытаемся переместить на базу
+        else if (pileId.startsWith('foundation-')) {
+          const pileIndex = parseInt(pileId.split('-')[1]);
+          moved = this.game.tryMove('foundation', pileIndex);
         }
+
+        if (moved) return; // Если ход успешен, выходим
+
+        // Если переместить не удалось (например, король не подходит по правилам), снимаем выделение
+        this.game.selected = null;
+        this.game.dispatch('selectionChanged', {});
         return;
       }
-      const source = cardEl.dataset.source;
-      const pileIndex = parseInt(cardEl.dataset.pileIndex) || 0;
-      const cardIndex = parseInt(cardEl.dataset.cardIndex) || 0;
-      this.game.selectCard(source, pileIndex, cardIndex);
+
+      // 2. Стандартная логика: клик по самой карте
+      if (cardEl) {
+        const source = cardEl.dataset.source;
+        const pileIndex = parseInt(cardEl.dataset.pileIndex) || 0;
+        const cardIndex = parseInt(cardEl.dataset.cardIndex) || 0;
+        this.game.selectCard(source, pileIndex, cardIndex);
+        return;
+      }
+
+      // 3. Клик мимо карт и мимо стопок (просто зелёный фон) — снимаем выделение
+      if (this.game.selected) {
+        this.game.selected = null;
+        this.game.dispatch('selectionChanged', {});
+      }
     });
 
     // Клавиатура (второе событие, помимо click)
